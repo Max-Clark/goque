@@ -17,10 +17,10 @@ A fast http jq evaluator
     - [x] Investigate gojq
         - Yup, it's fast
     - [x] Implement gojq from env variable
-        - [x] Compile query
-        - [x] Error on bad query
+        - [x] Compile filter
+        - [x] Error on bad filter
     - [ ] Implement gojq from http header
-        - [ ] Error on bad query
+        - [ ] Error on bad filterr
     - [ ] Implement benchmarking scaffolding 
     - [ ] Research testing methodologies/libraries
     - [ ] Implement testing scaffolding
