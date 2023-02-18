@@ -18,6 +18,9 @@ func ValidJqMatches() []JQMatch {
 		{filter: ".", input: "\"test\"", output: "\"test\""},
 		{filter: ".test", input: "{\"test\":\"2\"}", output: "\"2\""},
 		{filter: ".test", input: "{\"test\":{\"value\":\"2\"}}", output: "{\"value\":\"2\"}"},
+		{filter: ".test", input: "{\"test\":{\"value\":\"&\"}}", output: "{\"value\":\"&\"}"},
+		{filter: ".test", input: "{\"test\":{\"value\":\"😍\"}}", output: "{\"value\":\"😍\"}"},
+		{filter: ".😍", input: "{\"😍\":{\"value\":\"test\"}}", output: "{\"value\":\"test\"}"},
 	}
 }
 
@@ -42,8 +45,6 @@ func TestCompileJQ(t *testing.T) {
 
 		outString, err := json.Marshal(out)
 
-		// err, ok = out.(error)
-		// assert.True(t, ok)
 		assert.NoError(t, err)
 
 		assert.Equal(t, v.output, string(outString))

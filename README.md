@@ -8,12 +8,13 @@ A blazing fast http jq evaluator written in go.
 
 *NOTE* Variable preference is Env Var < Command Line < HTTP Header
 
-| Name         | Required | Default      | Env Var       | Command Line | HTTP Header           |
-| ------------ | -------- | ------------ | ------------- | ------------ | --------------------- |
-| jqExpression | **\***   |              | JQ_EXPRESSION | -jq          | x-goque-jq-expression |
-| jqPath       |          | `/api/v1/jq` | JQ_PATH       | -a           |                       |
-| host         |          | `""`         | HOST          | -h           |                       |
-| port         |          | `8080`       | PORT          | -p           |                       |
+| Name         | Required | Description | Default       | Env Var       | Command Line | HTTP Header           |
+| ------------ | -------- | ----------- | ------------- | ------------- | ------------ | --------------------- |
+| jqFilter | **\***   | The filter            |               | JQ_FILTER | -jq          | x-goque-jq-filter |
+| jqPath       |          |             | `/api/v1/jq`  | JQ_PATH       | -a           |                       |
+| host         |          |             | `""`          | HOST          | -h           |                       |
+| port         |          |             | `8080`        | PORT          | -p           |                       |
+| htmlEscape   |          |             | do not escape | HTML_ESCAPE   | -e           |                       |
 
 ## HTTP Server
 

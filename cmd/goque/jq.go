@@ -60,5 +60,5 @@ func PostHandler(c *fiber.Ctx, p *HandlerParams) error {
 	}
 
 	c.Status(fiber.StatusBadRequest)
-	return c.JSON(fiber.Map{"status": "error", "message": "A JQ expression was not sent with request"})
+	return c.JSON(fiber.Map{"status": "error", "message": "A JQ filter was not sent with request"})
 }

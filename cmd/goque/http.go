@@ -10,7 +10,7 @@ func RunServer(hp *HandlerParams) {
 	app := fiber.New(fiber.Config{
 		AppName:               "goque",
 		DisableStartupMessage: true,
-		JSONEncoder:           json.Marshal,
+		JSONEncoder:           json.MarshalNoEscape,
 		JSONDecoder:           json.Unmarshal,
 	})
 
