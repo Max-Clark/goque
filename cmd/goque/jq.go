@@ -6,15 +6,15 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func CompileJQ(expression string) *gojq.Code {
-	query, err := gojq.Parse(expression)
+func CompileJQ(filter string) *gojq.Code {
+	query, err := gojq.Parse(filter)
 	if err != nil {
-		log.Fatal().AnErr("JQ", err).Msg("An invalid JQ expression was entered")
+		log.Fatal().AnErr("JQ", err).Msg("An invalid JQ filter was entered")
 	}
 
 	code, err := gojq.Compile(query)
 	if err != nil {
-		log.Fatal().AnErr("JQ", err).Msg("Could not compile JQ expression")
+		log.Fatal().AnErr("JQ", err).Msg("Could not compile JQ filter")
 	}
 
 	return code
