@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/goccy/go-json"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -13,40 +13,46 @@ type JQMatch struct {
 	output string
 }
 
-func ValidJqMatches() []JQMatch {
-	return []JQMatch{
-		{filter: ".", input: "\"test\"", output: "\"test\""},
-		{filter: ".test", input: "{\"test\":\"2\"}", output: "\"2\""},
-		{filter: ".test", input: "{\"test\":{\"value\":\"2\"}}", output: "{\"value\":\"2\"}"},
-		{filter: ".test", input: "{\"test\":{\"value\":\"&\"}}", output: "{\"value\":\"&\"}"},
-		{filter: ".test", input: "{\"test\":{\"value\":\"😍\"}}", output: "{\"value\":\"😍\"}"},
-		{filter: ".😍", input: "{\"😍\":{\"value\":\"test\"}}", output: "{\"value\":\"test\"}"},
+func _CompileAssertEqual(t *testing.T, jm JQMatch) {
+	json := jsoniter.Config{
+		EscapeHTML: false,
+	}.Froze()
+
+	code := CompileJQ(jm.filter)
+	assert.NotNil(t, code)
+
+	var inputBytes = []byte(jm.input)
+	var data interface{}
+	json.Unmarshal(inputBytes, &data)
+
+	iter := code.Run(data)
+	assert.NotNil(t, iter)
+
+	out, ok := iter.Next()
+	assert.True(t, ok)
+
+	if err, ok := out.(error); ok {
+		assert.NoError(t, err)
 	}
+
+	outBytes, err := json.Marshal(out)
+
+	assert.NoError(t, err)
+
+	outString := string(outBytes)
+	assert.Equal(t, jm.output, outString)
 }
 
 func TestCompileJQ(t *testing.T) {
+
 	// TODO: Test fatal?
-	for _, v := range ValidJqMatches() {
-		code := CompileJQ(v.filter)
-		assert.NotNil(t, code)
 
-		var jsonInput any
-		json.Unmarshal([]byte(v.input), &jsonInput)
+	/* Valid Entries */
+	_CompileAssertEqual(t, JQMatch{filter: ".", input: "\"test\"", output: "\"test\""})
+	_CompileAssertEqual(t, JQMatch{filter: ".test", input: "{\"test\":\"2\"}", output: "\"2\""})
+	_CompileAssertEqual(t, JQMatch{filter: ".test", input: "{\"test\":{\"value\":\"2\"}}", output: "{\"value\":\"2\"}"})
+	_CompileAssertEqual(t, JQMatch{filter: ".test", input: "{\"test\":{\"value\":\"&\"}}", output: "{\"value\":\"&\"}"})
+	_CompileAssertEqual(t, JQMatch{filter: ".test", input: "{\"test\":{\"value\":\"😍\"}}", output: "{\"value\":\"😍\"}"})
+	_CompileAssertEqual(t, JQMatch{filter: ".\"日本\"", input: "{\"日本\":{\"value\":\"円\"}}", output: "{\"value\":\"円\"}"})
 
-		iter := code.Run(jsonInput)
-		assert.NotNil(t, iter)
-
-		out, ok := iter.Next()
-		assert.True(t, ok)
-
-		if err, ok := out.(error); ok {
-			assert.NoError(t, err)
-		}
-
-		outString, err := json.Marshal(out)
-
-		assert.NoError(t, err)
-
-		assert.Equal(t, v.output, string(outString))
-	}
 }

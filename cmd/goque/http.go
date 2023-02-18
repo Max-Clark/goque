@@ -1,16 +1,20 @@
 package main
 
 import (
-	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/rs/zerolog/log"
 )
 
 func RunServer(hp *HandlerParams) {
+	json := jsoniter.Config{
+		EscapeHTML: false,
+	}.Froze()
+
 	app := fiber.New(fiber.Config{
 		AppName:               "goque",
 		DisableStartupMessage: true,
-		JSONEncoder:           json.MarshalNoEscape,
+		JSONEncoder:           json.Marshal,
 		JSONDecoder:           json.Unmarshal,
 	})
 
