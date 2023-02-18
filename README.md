@@ -1,6 +1,25 @@
 # goque
 
-A fast http jq evaluator
+A blazing fast http jq evaluator written in go.
+
+## Usage
+
+### Configuration Variables
+
+*NOTE* Variable preference is Env Var < Command Line < HTTP Header
+
+| Name         | Required | Default      | Env Var       | Command Line | HTTP Header           |
+| ------------ | -------- | ------------ | ------------- | ------------ | --------------------- |
+| jqExpression | **\***   |              | JQ_EXPRESSION | -jq          | x-goque-jq-expression |
+| jqPath       |          | `/api/v1/jq` | JQ_PATH       | -a           |                       |
+| host         |          | `""`         | HOST          | -h           |                       |
+| port         |          | `8080`       | PORT          | -p           |                       |
+
+## HTTP Server
+
+Goque uses [Fiber](https://gofiber.io/) as its server/router. 
+
+---
 
 # Plan
 
