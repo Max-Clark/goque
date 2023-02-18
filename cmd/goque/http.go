@@ -20,7 +20,7 @@ func RunServer(hp *HandlerParams) {
 
 	// TODO: Host OAS spec
 
-	app.Post("/api/v1/jq", func(c *fiber.Ctx) error {
+	app.Post(hp.path, func(c *fiber.Ctx) error {
 		c.Accepts("application/json")
 		return PostHandler(c, hp)
 	})
