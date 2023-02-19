@@ -11,8 +11,8 @@ github.com/go-logr/logr v1.2.3/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbV
 github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=
 github.com/go-logr/stdr v1.2.2/go.mod h1:mMo/vtBO5dYbehREoey6XUKy/eSumjCCveDpRre4VKE=
 github.com/godbus/dbus/v5 v5.0.4/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
-github.com/gofiber/contrib/otelfiber v0.0.0-20230218180033-0f511457f4b0 h1:J701shWyhknqQv4Mlif3/UxJmG1D6A7/hLCKiLpzfWE=
-github.com/gofiber/contrib/otelfiber v0.0.0-20230218180033-0f511457f4b0/go.mod h1:w3QN5+WoL+2z/0a3yADN7GXkJsxV0YnNSPK4oiUgTgs=
+github.com/gofiber/contrib/otelfiber v0.0.0-20230219091647-e01cfe399a9b h1:SqD2jBL7ab/Sd3/QxLORKgKtGWwhfCSYvJjqOyda9ME=
+github.com/gofiber/contrib/otelfiber v0.0.0-20230219091647-e01cfe399a9b/go.mod h1:w3QN5+WoL+2z/0a3yADN7GXkJsxV0YnNSPK4oiUgTgs=
 github.com/gofiber/fiber/v2 v2.42.0 h1:Fnp7ybWvS+sjNQsFvkhf4G8OhXswvB6Vee8hM/LyS+8=
 github.com/gofiber/fiber/v2 v2.42.0/go.mod h1:3+SGNjqMh5VQH5Vz2Wdi43zTIV16ktlFd3x3R6O1Zlc=
 github.com/google/go-cmp v0.5.9 h1:O2Tfq5qg4qc4AmwVlvv0oLiVAGB7enBSJ2x2DqQFi38=

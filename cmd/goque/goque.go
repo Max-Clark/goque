@@ -12,16 +12,27 @@ Configuration of goque:
 | Server port           | `"8080"`       | PORT        | -p   |                   |
 | Escape HTML on return | `false`        | HTML_ESCAPE | -e   |                   |
 
-Usage of goque:
+Usage of ./goque:
   -a string
-        Server path configuration; default "/api/v1/jq"
-  -e    Escape HTML on return, use when returning to a web interface; default false
+        Server path (default "/api/v1/jq")
+  -e string
+        Escape HTML on return (default "false")
   -h string
-        Server host configuration; default ""
+        Server host
   -jq string
         JQ filter string
+  -l string
+        Default log level (default "Info")
   -p string
-        Server port configuration; default "8080"
+        Server port (default "8080")
+  -s string
+        Server scheme
+  -td string
+        Disable tracer (default "false")
+  -te string
+        Tracer endpoint, url (default "http://localhost:14268/api/traces")
+  -tr string
+        Tracer ratio, 0-1 (default "1")
 */
 
 package main
@@ -43,6 +54,7 @@ const portDefault = "8080"
 const pathDefault = "/api/v1/jq"
 const escapeHTMLDefault = "false"
 const schemeDefault = ""
+const tracerEndpointDefault = "http://localhost:14268/api/traces"
 
 // Entry to goque. Initializes logger, gets params, and
 // starts server
@@ -51,7 +63,7 @@ func main() {
 
 	InitLogging(gp.logLevel)
 
-	tp := InitTracer(gp.tracerRatio)
+	tp := InitTracer(gp.tracerRatio, gp.tracerEndpoint)
 
 	defer func() {
 		if err := tp.Shutdown(context.Background()); err != nil {
@@ -68,15 +80,16 @@ func main() {
 func GetGoqueParams() *GoqueParams {
 
 	var config = map[string]*ConfigurationVar{
-		"jq":            {desc: "JQ filter string", val: "", envVar: "GOQUE_JQ_FILTER", arg: "jq"},
-		"path":          {desc: "Server path", val: pathDefault, envVar: "GOQUE_PATH", arg: "a"},
-		"host":          {desc: "Server host", val: hostDefault, envVar: "GOQUE_HOST", arg: "h"},
-		"port":          {desc: "Server port", val: portDefault, envVar: "GOQUE_PORT", arg: "p"},
-		"scheme":        {desc: "Server scheme", val: schemeDefault, envVar: "GOQUE_SCHEME", arg: "s"},
-		"escapeHtml":    {desc: "Escape HTML on return", val: escapeHTMLDefault, envVar: "GOQUE_HTML_ESCAPE", arg: "e"},
-		"logLevel":      {desc: "Default log level", val: "Info", envVar: "GOQUE_LOG_LEVEL", arg: "l"},
-		"tracerDisable": {desc: "Disable tracer", val: "false", envVar: "GOQUE_TRACER_DISABLE", arg: "td"},
-		"tracerRatio":   {desc: "Tracer ratio, 0-1", val: "1", envVar: "GOQUE_TRACER_RATIO", arg: "tr"},
+		"jq":             {desc: "JQ filter string", val: "", envVar: "GOQUE_JQ_FILTER", arg: "jq"},
+		"path":           {desc: "Server path", val: pathDefault, envVar: "GOQUE_PATH", arg: "a"},
+		"host":           {desc: "Server host", val: hostDefault, envVar: "GOQUE_HOST", arg: "h"},
+		"port":           {desc: "Server port", val: portDefault, envVar: "GOQUE_PORT", arg: "p"},
+		"scheme":         {desc: "Server scheme", val: schemeDefault, envVar: "GOQUE_SCHEME", arg: "s"},
+		"escapeHtml":     {desc: "Escape HTML on return", val: escapeHTMLDefault, envVar: "GOQUE_HTML_ESCAPE", arg: "e"},
+		"logLevel":       {desc: "Default log level", val: "Info", envVar: "GOQUE_LOG_LEVEL", arg: "l"},
+		"tracerDisable":  {desc: "Disable tracer", val: "false", envVar: "GOQUE_TRACER_DISABLE", arg: "td"},
+		"tracerRatio":    {desc: "Tracer ratio, 0-1", val: "1", envVar: "GOQUE_TRACER_RATIO", arg: "tr"},
+		"tracerEndpoint": {desc: "Tracer endpoint, url", val: tracerEndpointDefault, envVar: "GOQUE_TRACER_ENDPOINT", arg: "te"},
 	}
 
 	for _, v := range config {
@@ -115,15 +128,16 @@ func GetGoqueParams() *GoqueParams {
 	}
 
 	return &GoqueParams{
-		tracerEnabled: true,
-		tracerRatio:   tracerRatio,
-		logLevel:      logLevel,
-		jqFilter:      config["jq"].val,
-		host:          config["host"].val,
-		port:          config["port"].val,
-		path:          config["path"].val,
-		scheme:        config["scheme"].val,
-		escape:        parsedEscapeHtml,
+		tracerEnabled:  true,
+		tracerRatio:    tracerRatio,
+		tracerEndpoint: config["tracerEndpoint"].val,
+		logLevel:       logLevel,
+		jqFilter:       config["jq"].val,
+		host:           config["host"].val,
+		port:           config["port"].val,
+		path:           config["path"].val,
+		scheme:         config["scheme"].val,
+		escape:         parsedEscapeHtml,
 	}
 }
 
@@ -141,14 +155,15 @@ type ConfigurationVar struct {
 
 // A struct containing server and jq configuration info.
 type GoqueParams struct {
-	code          *gojq.Code // Compiled JQ if set with env/cli
-	tracerEnabled bool
-	tracerRatio   float64
-	logLevel      zerolog.Level
-	escape        bool   // Escape HTML
-	jqFilter      string // The JQ filter string
-	host          string // The server host
-	port          string // The server port
-	scheme        string // The server scheme
-	path          string // The jq API path
+	code           *gojq.Code // Compiled JQ if set with env/cli
+	tracerEnabled  bool
+	tracerRatio    float64
+	tracerEndpoint string
+	logLevel       zerolog.Level
+	escape         bool   // Escape HTML
+	jqFilter       string // The JQ filter string
+	host           string // The server host
+	port           string // The server port
+	scheme         string // The server scheme
+	path           string // The jq API path
 }

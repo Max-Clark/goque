@@ -16,4 +16,5 @@
 .vscode
 
 __debug_bin
-cmd/goque/goque
+/goque
+/cmd/goque/goque
