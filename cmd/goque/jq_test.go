@@ -18,7 +18,7 @@ func _CompileAssertEqual(t *testing.T, jm JQMatch) {
 		EscapeHTML: false,
 	}.Froze()
 
-	code := CompileJQ(jm.filter)
+	code := CompileJQCode(jm.filter)
 	assert.NotNil(t, code)
 
 	var inputBytes = []byte(jm.input)

@@ -6,6 +6,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Starts the http server. Takes params for escaping html,
+// server properties, and other handler variables. Handles
+// json POSTs on hp.path.
 func RunServer(hp *HandlerParams) {
 	json := jsoniter.Config{
 		EscapeHTML: hp.escape,
@@ -26,6 +29,7 @@ func RunServer(hp *HandlerParams) {
 
 	app.Post(hp.path, func(c *fiber.Ctx) error {
 		c.Accepts("application/json")
+		c.AcceptsCharsets("utf-8")
 		return PostHandler(c, hp)
 	})
 
