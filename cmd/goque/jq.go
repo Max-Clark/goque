@@ -1,14 +1,25 @@
 package main
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/itchyny/gojq"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 )
+
+var tracer = otel.Tracer("goque")
 
 // Compile the provided filter from env vars. Failing the parse or
 // compile will fatal the program.
 func CompileJQCode(filter string) *gojq.Code {
+	ctx := context.Background()
+	defer ctx.Done()
+
+	_, span := tracer.Start(ctx, "CompileJQCode")
+	defer span.End()
+
 	query, err := gojq.Parse(filter)
 	if err != nil {
 		log.Fatal().AnErr("JQ", err).Msg("An invalid JQ filter was entered")
@@ -44,8 +55,14 @@ func GetFirstValueIter(iter gojq.Iter) (any, error) {
 // the x-goque-jq-filter header is set, the filter is parsed and ran
 // against the body. The x-goque-jq-filter takes priority over
 // JQ_FILTER. Parsing errors will be returned as 400 with a reason.
-func PostHandler(c *fiber.Ctx, p *HandlerParams) error {
+func PostHandler(c *fiber.Ctx, p *GoqueParams) error {
 	// defer timeTrack(time.Now(), "PostHandler")
+
+	_, span := tracer.Start(c.UserContext(), "PostHandler")
+	defer span.End()
+
+	c.Accepts("application/json")
+	c.AcceptsCharsets("utf-8")
 
 	if p == nil {
 		log.Panic().Msg("HandlerParams not configured, panic")

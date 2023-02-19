@@ -27,6 +27,7 @@ Usage of goque:
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 	"strconv"
@@ -46,31 +47,44 @@ const schemeDefault = ""
 // Entry to goque. Initializes logger, gets params, and
 // starts server
 func main() {
-	InitLogging(defaultLogLevel)
+	gp := GetGoqueParams()
 
-	hp := GetHandlerParams()
+	InitLogging(gp.logLevel)
 
-	RunServer(&hp)
+	tp := InitTracer(gp.tracerRatio)
+
+	defer func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			log.Printf("Error shutting down tracer provider: %v", err)
+		}
+	}()
+
+	RunServer(gp)
 }
 
 // Grabs the handler params from the env vars or command line.
 // Command line has precedence. Returns a HandlerParams object
 // that configures the server & jq evaluation.
-func GetHandlerParams() HandlerParams {
+func GetGoqueParams() *GoqueParams {
 
 	var config = map[string]*ConfigurationVar{
-		"jq":         {desc: "JQ filter string", val: "", envVar: "JQ_FILTER", arg: "jq"},
-		"path":       {desc: "Server path", val: pathDefault, envVar: "JQ_PATH", arg: "a"},
-		"host":       {desc: "Server host", val: hostDefault, envVar: "HOST", arg: "h"},
-		"port":       {desc: "Server port", val: portDefault, envVar: "PORT", arg: "p"},
-		"scheme":     {desc: "Server scheme", val: schemeDefault, envVar: "SCHEME", arg: "s"},
-		"escapeHtml": {desc: "Escape HTML on return", val: escapeHTMLDefault, envVar: "HTML_ESCAPE", arg: "e"},
+		"jq":            {desc: "JQ filter string", val: "", envVar: "GOQUE_JQ_FILTER", arg: "jq"},
+		"path":          {desc: "Server path", val: pathDefault, envVar: "GOQUE_PATH", arg: "a"},
+		"host":          {desc: "Server host", val: hostDefault, envVar: "GOQUE_HOST", arg: "h"},
+		"port":          {desc: "Server port", val: portDefault, envVar: "GOQUE_PORT", arg: "p"},
+		"scheme":        {desc: "Server scheme", val: schemeDefault, envVar: "GOQUE_SCHEME", arg: "s"},
+		"escapeHtml":    {desc: "Escape HTML on return", val: escapeHTMLDefault, envVar: "GOQUE_HTML_ESCAPE", arg: "e"},
+		"logLevel":      {desc: "Default log level", val: "Info", envVar: "GOQUE_LOG_LEVEL", arg: "l"},
+		"tracerDisable": {desc: "Disable tracer", val: "false", envVar: "GOQUE_TRACER_DISABLE", arg: "td"},
+		"tracerRatio":   {desc: "Tracer ratio, 0-1", val: "1", envVar: "GOQUE_TRACER_RATIO", arg: "tr"},
 	}
 
 	for _, v := range config {
 		// If the env var exists, set the value
-		if envVal, ok := os.LookupEnv(v.envVar); ok {
-			v.val = envVal
+		if v.envVar != "" {
+			if envVal, ok := os.LookupEnv(v.envVar); ok {
+				v.val = envVal
+			}
 		}
 
 		// If the command line argument was set, set the value.
@@ -83,19 +97,39 @@ func GetHandlerParams() HandlerParams {
 
 	// escape is a boolean, so parse it. If error, set to false and warn.
 	parsedEscapeHtml, err := strconv.ParseBool(config["escapeHtml"].val)
-
 	if err != nil {
-		log.Warn().Msg("-e or HTML_ESCAPE invalid, defaulting to false")
+		log.Warn().Msg("-e or HTML_ESCAPE invalid, defaulting to `false`")
+		parsedEscapeHtml = false
 	}
 
-	return HandlerParams{
-		jqFilter: config["jq"].val,
-		host:     config["host"].val,
-		port:     config["port"].val,
-		path:     config["path"].val,
-		scheme:   config["scheme"].val,
-		escape:   parsedEscapeHtml,
+	tracerRatio, err := strconv.ParseFloat(config["tracerRatio"].val, 64)
+	if err != nil {
+		log.Warn().AnErr("InitTracer", err).Msg("Invalid tracerRatio, defaulting to `1` (100%)")
+		tracerRatio = 1.0
 	}
+
+	logLevel, err := zerolog.ParseLevel(config["logLevel"].val)
+	if err != nil {
+		log.Warn().AnErr("InitTracer", err).Msg("Invalid logLevel, defaulting to " + defaultLogLevel.String())
+		logLevel = defaultLogLevel
+	}
+
+	return &GoqueParams{
+		tracerEnabled: true,
+		tracerRatio:   tracerRatio,
+		logLevel:      logLevel,
+		jqFilter:      config["jq"].val,
+		host:          config["host"].val,
+		port:          config["port"].val,
+		path:          config["path"].val,
+		scheme:        config["scheme"].val,
+		escape:        parsedEscapeHtml,
+	}
+}
+
+// TODO
+func PrintGoqueParams(p GoqueParams) {
+
 }
 
 type ConfigurationVar struct {
@@ -106,12 +140,15 @@ type ConfigurationVar struct {
 }
 
 // A struct containing server and jq configuration info.
-type HandlerParams struct {
-	code     *gojq.Code // Compiled JQ if set with env/cli
-	escape   bool       // Escape HTML
-	jqFilter string     // The JQ filter string
-	host     string     // The server host
-	port     string     // The server port
-	scheme   string     // The server scheme
-	path     string     // The jq API path
+type GoqueParams struct {
+	code          *gojq.Code // Compiled JQ if set with env/cli
+	tracerEnabled bool
+	tracerRatio   float64
+	logLevel      zerolog.Level
+	escape        bool   // Escape HTML
+	jqFilter      string // The JQ filter string
+	host          string // The server host
+	port          string // The server port
+	scheme        string // The server scheme
+	path          string // The jq API path
 }

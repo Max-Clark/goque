@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gofiber/contrib/otelfiber"
 	"github.com/gofiber/fiber/v2"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/rs/zerolog/log"
@@ -9,9 +10,9 @@ import (
 // Starts the http server. Takes params for escaping html,
 // server properties, and other handler variables. Handles
 // json POSTs on hp.path.
-func RunServer(hp *HandlerParams) {
+func RunServer(gp *GoqueParams) {
 	json := jsoniter.Config{
-		EscapeHTML: hp.escape,
+		EscapeHTML: gp.escape,
 	}.Froze()
 
 	app := fiber.New(fiber.Config{
@@ -25,25 +26,25 @@ func RunServer(hp *HandlerParams) {
 	// 	Format: "[${ip}]:${port} ${status} - ${method} ${path}\n",
 	// }))
 
+	app.Use(otelfiber.Middleware())
+
 	// TODO: Host OAS spec
 
-	app.Post(hp.path, func(c *fiber.Ctx) error {
-		c.Accepts("application/json")
-		c.AcceptsCharsets("utf-8")
-		return PostHandler(c, hp)
+	app.Post(gp.path, func(c *fiber.Ctx) error {
+		return PostHandler(c, gp)
 	})
 
-	var parsedPort = hp.port
+	var parsedPort = gp.port
 	if parsedPort != "" {
 		parsedPort = ":" + parsedPort
 	}
 
-	var parsedScheme = hp.scheme
+	var parsedScheme = gp.scheme
 	if parsedScheme != "" {
-		parsedScheme = hp.scheme + "//"
+		parsedScheme = gp.scheme + "//"
 	}
 
-	var url = parsedScheme + hp.host + parsedPort
+	var url = parsedScheme + gp.host + parsedPort
 
 	log.Fatal().AnErr("RunServer", app.Listen(url)).Msg("")
 }
