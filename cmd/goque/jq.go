@@ -6,7 +6,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func CompileJQ(filter string) *gojq.Code {
+// Compile the provided filter from env vars. Failing the parse or
+// compile will fatal the program.
+func CompileJQCode(filter string) *gojq.Code {
 	query, err := gojq.Parse(filter)
 	if err != nil {
 		log.Fatal().AnErr("JQ", err).Msg("An invalid JQ filter was entered")
@@ -20,8 +22,8 @@ func CompileJQ(filter string) *gojq.Code {
 	return code
 }
 
-func RunCompiled(input any, code *gojq.Code) (interface{}, error) {
-	iter := code.Run(input) // or query.RunWithContext
+// Returns the first value in the iter.
+func GetFirstValueIter(iter gojq.Iter) (any, error) {
 	for {
 		v, ok := iter.Next()
 		if !ok {
@@ -37,28 +39,55 @@ func RunCompiled(input any, code *gojq.Code) (interface{}, error) {
 	return nil, nil
 }
 
+// The handler for jq evaluation requests. If a jq filter was provided
+// with env vars, the resultant compiled code will be used here. If
+// the x-goque-jq-filter header is set, the filter is parsed and ran
+// against the body. The x-goque-jq-filter takes priority over
+// JQ_FILTER. Parsing errors will be returned as 400 with a reason.
 func PostHandler(c *fiber.Ctx, p *HandlerParams) error {
 	// defer timeTrack(time.Now(), "PostHandler")
 
-	if p != nil && p.code != nil {
-		var body interface{}
-		err := c.BodyParser(&body)
+	if p == nil {
+		log.Panic().Msg("HandlerParams not configured, panic")
+	}
+
+	// Parse the JSON body into object
+	var body interface{}
+	err := c.BodyParser(&body)
+
+	// 400 if bad body
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": err.Error()})
+	}
+
+	// If jq filter header is set, prioritize over compiled code
+	if jqHeader := c.Get("x-goque-jq-filter"); jqHeader != "" {
+		query, err := gojq.Parse(jqHeader)
 
 		if err != nil {
-			c.Status(fiber.StatusBadRequest)
-			return c.JSON(fiber.Map{"status": "error", "message": err.Error()})
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": err.Error()})
 		}
 
-		out, err := RunCompiled(body, p.code)
+		out, err := GetFirstValueIter(query.Run(body))
 
 		if err != nil {
-			c.Status(fiber.StatusBadRequest)
-			return c.JSON(fiber.Map{"status": "error", "message": err.Error()})
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": err.Error()})
 		}
 
 		return c.JSON(out)
 	}
 
-	c.Status(fiber.StatusBadRequest)
-	return c.JSON(fiber.Map{"status": "error", "message": "A JQ filter was not sent with request"})
+	// If env jq query was compiled run the query
+	if p.code != nil {
+		out, err := GetFirstValueIter(p.code.Run(body))
+
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": err.Error()})
+		}
+
+		return c.JSON(out)
+	}
+
+	// jq filter nor jq env variable was provided
+	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "A JQ filter was not sent with request"})
 }
