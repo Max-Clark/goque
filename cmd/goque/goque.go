@@ -94,18 +94,21 @@ func GetGoqueParams() *GoqueParams {
 		"tracerEndpoint": {desc: "Tracer endpoint, url", val: defaultTracerEndpoint, envVar: "GOQUE_TRACER_ENDPOINT", arg: "te"},
 	}
 
-	var setEnvs string
+	// Since logging isn't configured yet, so we're logging at defaultLogLevel.
+	// Don't print evs until we get the loglevel
+	setEnvs := make(map[string]string)
 	for _, v := range config {
 		// If the env var exists, set the value
 		if v.envVar != "" {
 			if envVal, ok := os.LookupEnv(v.envVar); ok {
-				setEnvs += " " + v.envVar + "=" + envVal
+				setEnvs[v.envVar] = envVal
 				v.val = envVal
 			}
 		}
 
 		// If the command line argument was set, set the value.
 		// Note that this overwrites the env vars.
+		// TODO: figure out how to print items sent by command line
 		flag.StringVar(&v.val, v.arg, v.val, v.desc)
 	}
 
@@ -115,13 +118,16 @@ func GetGoqueParams() *GoqueParams {
 	// Parse logLevel, use default if error
 	parsedLogLevel, err := zerolog.ParseLevel(config["logLevel"].val)
 	if err != nil {
-		log.Warn().AnErr("InitTracer", err).Msg("Invalid logLevel, defaulting to " + defaultLogLevel.String())
 		parsedLogLevel = defaultLogLevel
 	}
 
 	InitLogging(parsedLogLevel)
 
-	log.Debug().Str("setEnvs", setEnvs)
+	if err != nil {
+		log.Warn().AnErr("InitTracer", err).Msg("Invalid logLevel, defaulting to " + defaultLogLevel.String())
+	}
+
+	log.Debug().Interface("setEnvs", setEnvs).Msg("")
 
 	// Report if any args aren't flags
 	unusedArgs := flag.Args()
