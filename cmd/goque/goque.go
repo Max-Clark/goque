@@ -49,19 +49,21 @@ import (
 )
 
 const defaultLogLevel = zerolog.DebugLevel
-const hostDefault = ""
-const portDefault = "8080"
-const pathDefault = "/api/v1/jq"
-const escapeHTMLDefault = "false"
-const schemeDefault = ""
-const tracerEndpointDefault = "http://localhost:14268/api/traces"
+const defaultHost = ""
+const defaultPort = "8080"
+const defaultPath = "/api/v1/jq"
+const defaultEscapeHTML = false
+const defaultScheme = ""
+const defaultTracerDisable = false
+const defaultTracerRatio = 1.0
+const defaultTracerEndpoint = "http://localhost:14268/api/traces"
 
 // Entry to goque. Initializes logger, gets params, and
 // starts server
 func main() {
 	gp := GetGoqueParams()
 
-	InitLogging(gp.logLevel)
+	PrintGoqueParams(gp)
 
 	tp := InitTracer(gp.tracerRatio, gp.tracerEndpoint)
 
@@ -81,21 +83,23 @@ func GetGoqueParams() *GoqueParams {
 
 	var config = map[string]*ConfigurationVar{
 		"jq":             {desc: "JQ filter string", val: "", envVar: "GOQUE_JQ_FILTER", arg: "jq"},
-		"path":           {desc: "Server path", val: pathDefault, envVar: "GOQUE_PATH", arg: "a"},
-		"host":           {desc: "Server host", val: hostDefault, envVar: "GOQUE_HOST", arg: "h"},
-		"port":           {desc: "Server port", val: portDefault, envVar: "GOQUE_PORT", arg: "p"},
-		"scheme":         {desc: "Server scheme", val: schemeDefault, envVar: "GOQUE_SCHEME", arg: "s"},
-		"escapeHtml":     {desc: "Escape HTML on return", val: escapeHTMLDefault, envVar: "GOQUE_HTML_ESCAPE", arg: "e"},
-		"logLevel":       {desc: "Default log level", val: "Info", envVar: "GOQUE_LOG_LEVEL", arg: "l"},
-		"tracerDisable":  {desc: "Disable tracer", val: "false", envVar: "GOQUE_TRACER_DISABLE", arg: "td"},
-		"tracerRatio":    {desc: "Tracer ratio, 0-1", val: "1", envVar: "GOQUE_TRACER_RATIO", arg: "tr"},
-		"tracerEndpoint": {desc: "Tracer endpoint, url", val: tracerEndpointDefault, envVar: "GOQUE_TRACER_ENDPOINT", arg: "te"},
+		"path":           {desc: "Server path", val: defaultPath, envVar: "GOQUE_PATH", arg: "a"},
+		"host":           {desc: "Server host", val: defaultHost, envVar: "GOQUE_HOST", arg: "h"},
+		"port":           {desc: "Server port", val: defaultPort, envVar: "GOQUE_PORT", arg: "p"},
+		"scheme":         {desc: "Server scheme", val: defaultScheme, envVar: "GOQUE_SCHEME", arg: "s"},
+		"escapeHtml":     {desc: "Escape HTML on return", val: strconv.FormatBool(defaultEscapeHTML), envVar: "GOQUE_HTML_ESCAPE", arg: "e"},
+		"logLevel":       {desc: "Default log level", val: defaultLogLevel.String(), envVar: "GOQUE_LOG_LEVEL", arg: "l"},
+		"tracerDisable":  {desc: "Disable tracer", val: strconv.FormatBool(defaultTracerDisable), envVar: "GOQUE_TRACER_DISABLE", arg: "td"},
+		"tracerRatio":    {desc: "Tracer ratio, 0-1", val: strconv.FormatFloat(defaultTracerRatio, 'f', -1, 64), envVar: "GOQUE_TRACER_RATIO", arg: "tr"},
+		"tracerEndpoint": {desc: "Tracer endpoint, url", val: defaultTracerEndpoint, envVar: "GOQUE_TRACER_ENDPOINT", arg: "te"},
 	}
 
+	var setEnvs string
 	for _, v := range config {
 		// If the env var exists, set the value
 		if v.envVar != "" {
 			if envVal, ok := os.LookupEnv(v.envVar); ok {
+				setEnvs += " " + v.envVar + "=" + envVal
 				v.val = envVal
 			}
 		}
@@ -105,34 +109,62 @@ func GetGoqueParams() *GoqueParams {
 		flag.StringVar(&v.val, v.arg, v.val, v.desc)
 	}
 
-	// Load the flags
+	// Parse the args
 	flag.Parse()
 
-	// escape is a boolean, so parse it. If error, set to false and warn.
+	// Parse logLevel, use default if error
+	parsedLogLevel, err := zerolog.ParseLevel(config["logLevel"].val)
+	if err != nil {
+		log.Warn().AnErr("InitTracer", err).Msg("Invalid logLevel, defaulting to " + defaultLogLevel.String())
+		parsedLogLevel = defaultLogLevel
+	}
+
+	InitLogging(parsedLogLevel)
+
+	log.Debug().Str("setEnvs", setEnvs)
+
+	// Report if any args aren't flags
+	unusedArgs := flag.Args()
+	if len(unusedArgs) > 0 {
+		printArr := zerolog.Arr()
+		for _, v := range unusedArgs {
+			printArr.Str(v)
+		}
+		log.Warn().Array("unusedArgs", printArr).Msg("Found unused args")
+	}
+
+	// Parse tracerDisable, use default if error
 	parsedEscapeHtml, err := strconv.ParseBool(config["escapeHtml"].val)
 	if err != nil {
 		log.Warn().Msg("-e or HTML_ESCAPE invalid, defaulting to `false`")
-		parsedEscapeHtml = false
+		parsedEscapeHtml = defaultEscapeHTML
 	}
 
-	tracerRatio, err := strconv.ParseFloat(config["tracerRatio"].val, 64)
+	// Parse tracerDisable, use default if error
+	parsedTracerDisable, err := strconv.ParseBool(config["tracerDisable"].val)
+	if err != nil {
+		log.Warn().Msg("-td or GOQUE_TRACER_DISABLE invalid, defaulting to `false`")
+		parsedTracerDisable = defaultTracerDisable
+	}
+
+	// Parse tracerDisable, use default if error
+	parsedTracerRatio, err := strconv.ParseFloat(config["tracerRatio"].val, 64)
 	if err != nil {
 		log.Warn().AnErr("InitTracer", err).Msg("Invalid tracerRatio, defaulting to `1` (100%)")
-		tracerRatio = 1.0
+		parsedTracerRatio = defaultTracerRatio
 	}
 
-	logLevel, err := zerolog.ParseLevel(config["logLevel"].val)
-	if err != nil {
-		log.Warn().AnErr("InitTracer", err).Msg("Invalid logLevel, defaulting to " + defaultLogLevel.String())
-		logLevel = defaultLogLevel
+	var code *gojq.Code
+	if config["jq"].val != "" {
+		code = CompileJQCode(config["jq"].val)
+		log.Info().Msg("JQ filter compiled")
 	}
 
 	return &GoqueParams{
-		tracerEnabled:  true,
-		tracerRatio:    tracerRatio,
+		tracerEnabled:  parsedTracerDisable,
+		tracerRatio:    parsedTracerRatio,
 		tracerEndpoint: config["tracerEndpoint"].val,
-		logLevel:       logLevel,
-		jqFilter:       config["jq"].val,
+		code:           code,
 		host:           config["host"].val,
 		port:           config["port"].val,
 		path:           config["path"].val,
@@ -141,9 +173,8 @@ func GetGoqueParams() *GoqueParams {
 	}
 }
 
-// TODO
-func PrintGoqueParams(p GoqueParams) {
-
+func PrintGoqueParams(gp *GoqueParams) {
+	log.Debug().Msgf("Goque params: %+v", *gp)
 }
 
 type ConfigurationVar struct {
@@ -159,9 +190,7 @@ type GoqueParams struct {
 	tracerEnabled  bool
 	tracerRatio    float64
 	tracerEndpoint string
-	logLevel       zerolog.Level
 	escape         bool   // Escape HTML
-	jqFilter       string // The JQ filter string
 	host           string // The server host
 	port           string // The server port
 	scheme         string // The server scheme
