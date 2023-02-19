@@ -67,6 +67,13 @@ Goque uses [Fiber](https://gofiber.io/) as its server/router.
   - [ ] Implement benchmarking scaffolding 
   - [ ] Research testing methodologies/libraries
   - [ ] Implement testing scaffolding
+- GoquePlay
+  - [ ] Investigate wasm compilation
+  - [ ] Service within goque or separate?
+  - [ ] Frontend
+    - [ ] Vanilla or Vue?
+    - [ ] Server API
+    - [ ] Client-side wasm integration
 - CI
   - [ ] Lock main branch, merge by request
   - [ ] Run tests
