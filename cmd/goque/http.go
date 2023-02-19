@@ -34,6 +34,9 @@ func RunServer(gp *GoqueParams) {
 		return PostHandler(c, gp)
 	})
 
+	// TODO: Create better validation for server urls
+	// :<port> is supported
+	// [<scheme>//]<host>[:<port>] is supported
 	var parsedPort = gp.port
 	if parsedPort != "" {
 		parsedPort = ":" + parsedPort

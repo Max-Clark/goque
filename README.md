@@ -33,7 +33,6 @@ Goque uses [Fiber](https://gofiber.io/) as its server/router.
 | Set tracer ratio, \[0,1\] | `1`     | GOQUE_TRACER_RATIO   | -tr  |
 
 
-
 ---
 
 # Plan
@@ -43,29 +42,37 @@ Goque uses [Fiber](https://gofiber.io/) as its server/router.
     - [x] Research logging
     - [x] Implement basic logging
     - [x] More robust logging
-- [ ] Tracing
+- [x] Tracing
 - [ ] Metrics
 - [ ] OAS
 - [ ] Validation
 - JQ
-    - [x] Investigate gojq
-        - Yup, it's fast
-    - [x] Implement gojq from env variable
-        - [x] Compile filter
-        - [x] Error on bad filter
-    - [x] Implement gojq from http header
-        - [x] Error on bad filterr
-    - [ ] Implement benchmarking scaffolding 
-    - [ ] Research testing methodologies/libraries
-    - [ ] Implement testing scaffolding
+  - [x] Investigate gojq
+      - Yup, it's fast
+  - [x] Implement gojq from env variable
+      - [x] Compile filter
+      - [x] Error on bad filter
+  - [x] Implement gojq from http header
+      - [x] Error on bad filterr
+  - [ ] Implement benchmarking scaffolding 
+  - [ ] Research testing methodologies/libraries
+  - [ ] Implement testing scaffolding
 - HTTP
-    - [x] Implement basic server with `http`
-    - [x] Investigate http libraries
-    - [ ] Implement TLS
-    - [ ] Investigate websocket usage
-    - [ ] Investigate sidecar usage
-        - [ ] Proper implementation? MITM?
-    - [ ] Implement benchmarking scaffolding 
-    - [ ] Research testing methodologies/libraries
-    - [ ] Implement testing scaffolding
+  - [x] Implement basic server with `http`
+  - [x] Investigate http libraries
+  - [ ] Implement TLS
+  - [ ] Investigate websocket usage
+  - [ ] Investigate sidecar usage
+      - [ ] Proper implementation? MITM?
+  - [ ] Implement benchmarking scaffolding 
+  - [ ] Research testing methodologies/libraries
+  - [ ] Implement testing scaffolding
+- CI
+  - [ ] Lock main branch, merge by request
+  - [ ] Run tests
+  - [ ] Run vuln scan
+  - [ ] Build wasm module
+  - [ ] Test wasm module
+  - [ ] Github release
+  - [ ] Build image and push
     
