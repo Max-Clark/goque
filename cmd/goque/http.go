@@ -8,7 +8,7 @@ import (
 
 func RunServer(hp *HandlerParams) {
 	json := jsoniter.Config{
-		EscapeHTML: false,
+		EscapeHTML: hp.escape,
 	}.Froze()
 
 	app := fiber.New(fiber.Config{
@@ -41,5 +41,5 @@ func RunServer(hp *HandlerParams) {
 
 	var url = parsedScheme + hp.host + parsedPort
 
-	log.Fatal().Err(app.Listen(url))
+	log.Fatal().AnErr("RunServer", app.Listen(url)).Msg("")
 }
