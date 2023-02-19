@@ -15,7 +15,7 @@ import (
 
 func InitTracer(ratio float64, endpoint string) *sdktrace.TracerProvider {
 	// Create a new
-	exporter, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(endpoint))) // "http://localhost:14268/api/traces"
+	exporter, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(endpoint))) // default endpoint: "http://localhost:14268/api/traces"
 	if err != nil {
 		log.Fatal().AnErr("initTracer", err).Msg("")
 	}
