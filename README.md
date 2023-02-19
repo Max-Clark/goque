@@ -4,17 +4,17 @@ A blazing fast http jq evaluator written in go.
 
 ## Usage
 
-### Configuration Variables
+### Configuration
 
 *NOTE* Variable preference is Env Var < Command Line < HTTP Header
 
-| Name         | Required | Description | Default       | Env Var       | Command Line | HTTP Header           |
-| ------------ | -------- | ----------- | ------------- | ------------- | ------------ | --------------------- |
-| jqFilter | **\***   | The filter            |               | JQ_FILTER | -jq          | x-goque-jq-filter |
-| jqPath       |          |             | `/api/v1/jq`  | JQ_PATH       | -a           |                       |
-| host         |          |             | `""`          | HOST          | -h           |                       |
-| port         |          |             | `8080`        | PORT          | -p           |                       |
-| htmlEscape   |          |             | do not escape | HTML_ESCAPE   | -e           |                       |
+| Description           | Default        | Env Var     | CLI  | HTTP Header       |
+| :-------------------- | :------------- | :---------- | :--- | :---------------- |
+| JQ filter string      | `nil`          | JQ_FILTER   | -jq  | x-goque-jq-filter |
+| JQ API path           | `"/api/v1/jq"` | JQ_PATH     | -a   |                   |
+| Server host           | `""`           | HOST        | -h   |                   |
+| Server port           | `"8080"`       | PORT        | -p   |                   |
+| Escape HTML on return | `false`        | HTML_ESCAPE | -e   |                   |
 
 ## HTTP Server
 
@@ -29,8 +29,8 @@ Goque uses [Fiber](https://gofiber.io/) as its server/router.
     - [x] Research logging
     - [x] Implement basic logging
     - [x] More robust logging
-    - [ ] Tracing
-    - [ ] Metrics
+- [ ] Tracing
+- [ ] Metrics
 - [ ] OAS
 - [ ] Validation
 - JQ
