@@ -99,8 +99,8 @@ go build -v -ldflags="-X 'main.Version=v1.0.0' -X 'app/build.User=$(id -u -n)' -
   - [x] Implement gojq from http header
       - [x] Error on bad filterr
   - [ ] Implement benchmarking scaffolding 
-  - [ ] Research testing methodologies/libraries
-  - [ ] Implement testing scaffolding
+  - [x] Research testing methodologies/libraries
+  - [x] Implement testing scaffolding
 - HTTP
   - [x] Implement basic server with `http`
   - [x] Investigate http libraries
@@ -109,8 +109,8 @@ go build -v -ldflags="-X 'main.Version=v1.0.0' -X 'app/build.User=$(id -u -n)' -
   - [ ] Investigate sidecar usage
       - [ ] Proper implementation? MITM?
   - [ ] Implement benchmarking scaffolding 
-  - [ ] Research testing methodologies/libraries
-  - [ ] Implement testing scaffolding
+  - [x] Research testing methodologies/libraries
+  - [x] Implement testing scaffolding
 - ~GoquePlay~ Going to make gojqplay instead, probably better to separate and probably more popular
 - CI
   - [ ] Lock main branch, merge by request
