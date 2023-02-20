@@ -1,13 +1,24 @@
 package main
 
 import (
+	"bytes"
 	"flag"
+	"io"
+	"net"
+	"net/http"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
 
+	jsoniter "github.com/json-iterator/go"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 )
+
+const waitForServerRetries = 20
+const waitForServerDelay = 50 * time.Millisecond
 
 func _setEnvFromEnviron(environ []string) {
 	os.Clearenv()
@@ -17,22 +28,66 @@ func _setEnvFromEnviron(environ []string) {
 	}
 }
 
+func _clearFlags() {
+	flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
+}
+
+func _setArgs(args []string) []string {
+	oldArgs := os.Args
+	os.Args = args
+	return oldArgs
+}
+
 func _resetGetGoqueParamsFromStr(args []string) *GoqueParams {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
 	os.Args = args
 
-	flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
+	_clearFlags()
+
 	config := GetDefaultConfiguration()
 	setEnvs, config := SetConfiguration(config)
 	gp := ParseGoqueParams(setEnvs, config)
 	return gp
 }
 
+// https://github.com/phayes/freeport/blob/master/freeport.go
+func _getFreePort() (int, error) {
+	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	if err != nil {
+		return 0, err
+	}
+
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		return 0, err
+	}
+	defer l.Close()
+	return l.Addr().(*net.TCPAddr).Port, nil
+}
+
+func _waitForServer(client *http.Client, url string) error {
+	var err error
+
+	for i := 0; i < waitForServerRetries; i++ {
+		time.Sleep(waitForServerDelay)
+		_, err = client.Get(url)
+
+		if err == nil {
+			return nil
+		}
+	}
+
+	return err
+}
+
+/****** TESTS ******/
+
 func TestConfigDefaults(t *testing.T) {
+	log.Info().Msg(reflect.Func.String())
 	defaultConfig := GetDefaultConfiguration()
-	_, config := SetConfiguration(nil)
+	_, config := SetConfiguration(GetDefaultConfiguration())
 
 	for k, _ := range defaultConfig {
 		assert.Equal(t, defaultConfig[k].val, config[k].val)
@@ -173,4 +228,90 @@ func TestGetGoqueParamsBadParseToDefaults(t *testing.T) {
 	assert.Equal(t, defaultTracerDisable, gp.tracerDisabled)
 	assert.Equal(t, defaultTracerRatio, gp.tracerRatio)
 	assert.Equal(t, defaultTracerEndpoint, gp.tracerEndpoint)
+}
+
+func Test_main(t *testing.T) {
+	tests := []struct {
+		description    string
+		route          string
+		method         string
+		reqContentType string
+		reqBody        string
+		reqJqHeader    string
+		resCode        int
+		resBody        string
+	}{
+		{
+			description:    "Valid result",
+			method:         "POST",
+			route:          "http://0.0.0.0:8080" + defaultPath,
+			reqContentType: "application/json",
+			reqBody:        `{"test":{"peanuts": true,"pineapple":"nope."}}`,
+			reqJqHeader:    `.test`,
+			resCode:        200,
+			resBody:        `{"peanuts": true,"pineapple":"nope."}`,
+		},
+		{
+			description:    "Bad Body",
+			method:         "POST",
+			route:          "http://0.0.0.0:8080" + defaultPath,
+			reqContentType: "application/json",
+			reqBody:        `"test`,
+			reqJqHeader:    `.`,
+			resCode:        400,
+			resBody:        `{"status":"error","message":"readStringSlowPath: unexpected end of input, error found in #5 byte of ...|\"test|..., bigger context ...|\"test|..."}`,
+		},
+	}
+
+	json := jsoniter.Config{
+		EscapeHTML: false,
+	}.Froze()
+
+	_clearFlags()
+	_setArgs([]string{os.Args[0]})
+
+	go main()
+
+	client := &http.Client{}
+
+	_waitForServer(client, "http://0.0.0.0:8080"+defaultPath)
+
+	for _, test := range tests {
+		var bodyReader io.Reader
+		if test.reqBody != "" {
+			bodyReader = bytes.NewReader([]byte(test.reqBody))
+		}
+
+		req, err := http.NewRequest(test.method, test.route, bodyReader)
+
+		if err != nil {
+			assert.FailNow(t, "Error creating http request")
+		}
+
+		req.Header.Add("x-goque-jq-filter", test.reqJqHeader)
+		req.Header.Add("content-type", test.reqContentType)
+
+		res, err := client.Do(req)
+
+		if err != nil {
+			assert.FailNow(t, "Error performing http request")
+		}
+
+		body, err := io.ReadAll(res.Body)
+		bodyString := string(body)
+
+		if err != nil {
+			assert.FailNow(t, "Error reading request body: "+bodyString)
+		}
+		res.Body.Close()
+
+		var bodyObj any
+		json.Unmarshal(body, &bodyObj)
+
+		var desiredObj any
+		json.Unmarshal([]byte(test.resBody), &desiredObj)
+
+		assert.Equalf(t, desiredObj, bodyObj, "Body did not match")
+
+	}
 }

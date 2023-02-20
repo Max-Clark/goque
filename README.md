@@ -44,12 +44,7 @@ curl --request POST \
   --url http://localhost:8080/api/v1/jq \
   --header 'Content-Type: application/json' \
   --header 'x-goque-jq-filter: .test' \
-  --data '{
-        "test": {
-                "peanuts": true,
-                "pineapple": "nope."
-        }
-}'
+  --data '{"test":{"peanuts": true,"pineapple":"nope."}}'
 {"peanuts":true,"pineapple":"nope."}%
 ```
 

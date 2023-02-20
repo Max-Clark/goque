@@ -61,7 +61,7 @@ const defaultTracerEndpoint = "http://localhost:14268/api/traces"
 // Entry to goque. Initializes logger, gets params, and
 // starts server
 func main() {
-	setEnvs, config := SetConfiguration(nil)
+	setEnvs, config := SetConfiguration(GetDefaultConfiguration())
 
 	gp := ParseGoqueParams(setEnvs, config)
 
@@ -152,10 +152,8 @@ func ParseGoqueParams(setEnvs map[string]string, config map[string]*Configuratio
 // Grabs the handler params from the env vars or command line.
 // Command line has precedence. Returns a HandlerParams object
 // that configures the server & jq evaluation.
-func SetConfiguration(config map[string]*ConfigurationVar) (map[string]string, map[string]*ConfigurationVar) {
-	if config == nil {
-		config = GetDefaultConfiguration()
-	}
+func SetConfiguration(map[string]*ConfigurationVar) (map[string]string, map[string]*ConfigurationVar) {
+	config := GetDefaultConfiguration()
 
 	// Since logging isn't configured yet, so we're logging at defaultLogLevel.
 	// Don't print evs until we get the loglevel
