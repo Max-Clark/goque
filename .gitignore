@@ -15,6 +15,8 @@
 # vendor/
 .vscode
 
+*.lcov
+*.info
 __debug_bin
 /goque
 /cmd/goque/goque

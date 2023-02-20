@@ -61,7 +61,9 @@ const defaultTracerEndpoint = "http://localhost:14268/api/traces"
 // Entry to goque. Initializes logger, gets params, and
 // starts server
 func main() {
-	gp := GetGoqueParams()
+	setEnvs, config := SetConfiguration(nil)
+
+	gp := ParseGoqueParams(setEnvs, config)
 
 	PrintGoqueParams(gp)
 
@@ -76,12 +78,9 @@ func main() {
 	RunServer(gp)
 }
 
-// Grabs the handler params from the env vars or command line.
-// Command line has precedence. Returns a HandlerParams object
-// that configures the server & jq evaluation.
-func GetGoqueParams() *GoqueParams {
-
-	var config = map[string]*ConfigurationVar{
+// Returns the default configuration values in a map of ConfigurationVars.
+func GetDefaultConfiguration() map[string]*ConfigurationVar {
+	return map[string]*ConfigurationVar{
 		"jq":             {desc: "JQ filter string", val: "", envVar: "GOQUE_JQ_FILTER", arg: "jq"},
 		"path":           {desc: "Server path", val: defaultPath, envVar: "GOQUE_PATH", arg: "a"},
 		"host":           {desc: "Server host", val: defaultHost, envVar: "GOQUE_HOST", arg: "h"},
@@ -93,28 +92,9 @@ func GetGoqueParams() *GoqueParams {
 		"tracerRatio":    {desc: "Tracer ratio, 0-1", val: strconv.FormatFloat(defaultTracerRatio, 'f', -1, 64), envVar: "GOQUE_TRACER_RATIO", arg: "tr"},
 		"tracerEndpoint": {desc: "Tracer endpoint, url", val: defaultTracerEndpoint, envVar: "GOQUE_TRACER_ENDPOINT", arg: "te"},
 	}
+}
 
-	// Since logging isn't configured yet, so we're logging at defaultLogLevel.
-	// Don't print evs until we get the loglevel
-	setEnvs := make(map[string]string)
-	for _, v := range config {
-		// If the env var exists, set the value
-		if v.envVar != "" {
-			if envVal, ok := os.LookupEnv(v.envVar); ok {
-				setEnvs[v.envVar] = envVal
-				v.val = envVal
-			}
-		}
-
-		// If the command line argument was set, set the value.
-		// Note that this overwrites the env vars.
-		// TODO: figure out how to print items sent by command line
-		flag.StringVar(&v.val, v.arg, v.val, v.desc)
-	}
-
-	// Parse the args
-	flag.Parse()
-
+func ParseGoqueParams(setEnvs map[string]string, config map[string]*ConfigurationVar) *GoqueParams {
 	// Parse logLevel, use default if error
 	parsedLogLevel, err := zerolog.ParseLevel(config["logLevel"].val)
 	if err != nil {
@@ -128,16 +108,6 @@ func GetGoqueParams() *GoqueParams {
 	}
 
 	log.Debug().Interface("setEnvs", setEnvs).Msg("")
-
-	// Report if any args aren't flags
-	unusedArgs := flag.Args()
-	if len(unusedArgs) > 0 {
-		printArr := zerolog.Arr()
-		for _, v := range unusedArgs {
-			printArr.Str(v)
-		}
-		log.Warn().Array("unusedArgs", printArr).Msg("Found unused args")
-	}
 
 	// Parse tracerDisable, use default if error
 	parsedEscapeHtml, err := strconv.ParseBool(config["escapeHtml"].val)
@@ -167,7 +137,7 @@ func GetGoqueParams() *GoqueParams {
 	}
 
 	return &GoqueParams{
-		tracerEnabled:  parsedTracerDisable,
+		tracerDisabled: parsedTracerDisable,
 		tracerRatio:    parsedTracerRatio,
 		tracerEndpoint: config["tracerEndpoint"].val,
 		code:           code,
@@ -177,6 +147,38 @@ func GetGoqueParams() *GoqueParams {
 		scheme:         config["scheme"].val,
 		escape:         parsedEscapeHtml,
 	}
+}
+
+// Grabs the handler params from the env vars or command line.
+// Command line has precedence. Returns a HandlerParams object
+// that configures the server & jq evaluation.
+func SetConfiguration(config map[string]*ConfigurationVar) (map[string]string, map[string]*ConfigurationVar) {
+	if config == nil {
+		config = GetDefaultConfiguration()
+	}
+
+	// Since logging isn't configured yet, so we're logging at defaultLogLevel.
+	// Don't print evs until we get the loglevel
+	setEnvs := make(map[string]string)
+	for _, v := range config {
+		// If the env var exists, set the value
+		if v.envVar != "" {
+			if envVal, ok := os.LookupEnv(v.envVar); ok {
+				setEnvs[v.envVar] = envVal
+				v.val = envVal
+			}
+		}
+
+		// If the command line argument was set, set the value.
+		// Note that this overwrites the env vars.
+		// TODO: figure out how to print items sent by command line
+		flag.StringVar(&v.val, v.arg, v.val, v.desc)
+	}
+
+	// Parse the args
+	flag.Parse()
+
+	return setEnvs, config
 }
 
 func PrintGoqueParams(gp *GoqueParams) {
@@ -193,7 +195,7 @@ type ConfigurationVar struct {
 // A struct containing server and jq configuration info.
 type GoqueParams struct {
 	code           *gojq.Code // Compiled JQ if set with env/cli
-	tracerEnabled  bool
+	tracerDisabled bool
 	tracerRatio    float64
 	tracerEndpoint string
 	escape         bool   // Escape HTML

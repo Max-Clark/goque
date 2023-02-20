@@ -31,7 +31,9 @@ func RunServer(gp *GoqueParams) {
 	// TODO: Host OAS spec
 
 	app.Post(gp.path, func(c *fiber.Ctx) error {
-		return PostHandler(c, gp)
+		_, span := tracer.Start(c.UserContext(), "PostHandler")
+		defer span.End()
+		return HandlePost(c, gp)
 	})
 
 	// TODO: Create better validation for server urls

@@ -50,16 +50,21 @@ func GetFirstValueIter(iter gojq.Iter) (any, error) {
 	return nil, nil
 }
 
+type PostHandler interface {
+	BodyParser(out interface{}) error
+	SendStatus(status int) error
+	JSON(data interface{}) error
+	Get(key string, defaultValue ...string) string
+}
+
 // The handler for jq evaluation requests. If a jq filter was provided
 // with env vars, the resultant compiled code will be used here. If
 // the x-goque-jq-filter header is set, the filter is parsed and ran
 // against the body. The x-goque-jq-filter takes priority over
 // JQ_FILTER. Parsing errors will be returned as 400 with a reason.
-func PostHandler(c *fiber.Ctx, p *GoqueParams) error {
+// func HandlePost(c PostHandler, p *GoqueParams) error {
+func HandlePost(c *fiber.Ctx, p *GoqueParams) error {
 	// defer timeTrack(time.Now(), "PostHandler")
-
-	_, span := tracer.Start(c.UserContext(), "PostHandler")
-	defer span.End()
 
 	c.Accepts("application/json")
 	c.AcceptsCharsets("utf-8")
@@ -74,7 +79,8 @@ func PostHandler(c *fiber.Ctx, p *GoqueParams) error {
 
 	// 400 if bad body
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": err.Error()})
+		c.SendStatus(fiber.StatusBadRequest)
+		return c.JSON(fiber.Map{"status": "error", "message": err.Error()})
 	}
 
 	// If jq filter header is set, prioritize over compiled code
@@ -82,13 +88,15 @@ func PostHandler(c *fiber.Ctx, p *GoqueParams) error {
 		query, err := gojq.Parse(jqHeader)
 
 		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": err.Error()})
+			c.SendStatus(fiber.StatusBadRequest)
+			return c.JSON(fiber.Map{"status": "error", "message": err.Error()})
 		}
 
 		out, err := GetFirstValueIter(query.Run(body))
 
 		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": err.Error()})
+			c.SendStatus(fiber.StatusBadRequest)
+			return c.JSON(fiber.Map{"status": "error", "message": err.Error()})
 		}
 
 		return c.JSON(out)
@@ -99,12 +107,14 @@ func PostHandler(c *fiber.Ctx, p *GoqueParams) error {
 		out, err := GetFirstValueIter(p.code.Run(body))
 
 		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": err.Error()})
+			c.SendStatus(fiber.StatusBadRequest)
+			return c.JSON(fiber.Map{"status": "error", "message": err.Error()})
 		}
 
 		return c.JSON(out)
 	}
 
 	// jq filter nor jq env variable was provided
-	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "A JQ filter was not sent with request"})
+	c.SendStatus(fiber.StatusBadRequest)
+	return c.JSON(fiber.Map{"status": "error", "message": "A JQ filter was not sent with request"})
 }
