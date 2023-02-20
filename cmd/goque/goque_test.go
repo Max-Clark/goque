@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"flag"
 	"io"
-	"net"
 	"net/http"
 	"os"
 	"reflect"
@@ -52,21 +51,7 @@ func _resetGetGoqueParamsFromStr(args []string) *GoqueParams {
 	return gp
 }
 
-// https://github.com/phayes/freeport/blob/master/freeport.go
-func _getFreePort() (int, error) {
-	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
-	if err != nil {
-		return 0, err
-	}
-
-	l, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		return 0, err
-	}
-	defer l.Close()
-	return l.Addr().(*net.TCPAddr).Port, nil
-}
-
+// Waits for the a server to be ready (i.e., return a HTTP response)
 func _waitForServer(client *http.Client, url string) error {
 	var err error
 
@@ -83,152 +68,6 @@ func _waitForServer(client *http.Client, url string) error {
 }
 
 /****** TESTS ******/
-
-func TestConfigDefaults(t *testing.T) {
-	log.Info().Msg(reflect.Func.String())
-	defaultConfig := GetDefaultConfiguration()
-	_, config := SetConfiguration(GetDefaultConfiguration())
-
-	for k, _ := range defaultConfig {
-		assert.Equal(t, defaultConfig[k].val, config[k].val)
-	}
-}
-
-func TestGetGoqueDefaults(t *testing.T) {
-	args := []string{os.Args[0]}
-	gp := _resetGetGoqueParamsFromStr(args)
-
-	assert.Equal(t, defaultEscapeHTML, gp.escape)
-	assert.Equal(t, defaultHost, gp.host)
-	assert.Equal(t, defaultPath, gp.path)
-	assert.Equal(t, defaultPort, gp.port)
-	assert.Equal(t, defaultScheme, gp.scheme)
-	assert.Equal(t, defaultTracerDisable, gp.tracerDisabled)
-	assert.Equal(t, defaultTracerRatio, gp.tracerRatio)
-	assert.Equal(t, defaultTracerEndpoint, gp.tracerEndpoint)
-}
-
-// Set Env and command line args
-func TestGetGoqueParamsEnvs(t *testing.T) {
-	environ := os.Environ()
-	defer _setEnvFromEnviron(environ)
-
-	os.Clearenv()
-
-	config := GetDefaultConfiguration()
-
-	for k, v := range config {
-		switch k {
-		case "escapeHtml":
-			os.Setenv(v.envVar, "true")
-		case "tracerDisable":
-			os.Setenv(v.envVar, "true")
-		case "tracerRatio":
-			os.Setenv(v.envVar, "0.3")
-		default:
-			os.Setenv(v.envVar, v.val+"1")
-		}
-	}
-
-	args := []string{os.Args[0]}
-	gp := _resetGetGoqueParamsFromStr(args)
-
-	assert.Equal(t, !defaultEscapeHTML, gp.escape)
-	assert.Equal(t, defaultHost+"1", gp.host)
-	assert.Equal(t, defaultPath+"1", gp.path)
-	assert.Equal(t, defaultPort+"1", gp.port)
-	assert.Equal(t, defaultScheme+"1", gp.scheme)
-	assert.Equal(t, !defaultTracerDisable, gp.tracerDisabled)
-	assert.Equal(t, 0.3, gp.tracerRatio)
-	assert.Equal(t, defaultTracerEndpoint+"1", gp.tracerEndpoint)
-}
-
-// Set Env and command line args, verify command line args overwrite
-func TestGetGoqueParamsEnvsAndCli(t *testing.T) {
-	environ := os.Environ()
-	defer _setEnvFromEnviron(environ)
-
-	os.Clearenv()
-
-	config := GetDefaultConfiguration()
-
-	for k, v := range config {
-		switch k {
-		case "escapeHtml":
-			os.Setenv(v.envVar, "true")
-		case "tracerDisable":
-			os.Setenv(v.envVar, "true")
-		case "tracerRatio":
-			os.Setenv(v.envVar, "0.3")
-		default:
-			os.Setenv(v.envVar, v.val+"1")
-		}
-	}
-
-	args := []string{os.Args[0]}
-
-	for k, v := range config {
-		args = append(args, "-"+v.arg)
-		switch k {
-		case "escapeHtml":
-			args = append(args, "false")
-		case "tracerDisable":
-			args = append(args, "false")
-		case "tracerRatio":
-			args = append(args, "0.4")
-		default:
-			args = append(args, v.val+"2")
-		}
-	}
-
-	gp := _resetGetGoqueParamsFromStr(args)
-
-	assert.Equal(t, defaultEscapeHTML, gp.escape)
-	assert.Equal(t, defaultHost+"2", gp.host)
-	assert.Equal(t, defaultPath+"2", gp.path)
-	assert.Equal(t, defaultPort+"2", gp.port)
-	assert.Equal(t, defaultScheme+"2", gp.scheme)
-	assert.Equal(t, defaultTracerDisable, gp.tracerDisabled)
-	assert.Equal(t, 0.4, gp.tracerRatio)
-	assert.Equal(t, defaultTracerEndpoint+"2", gp.tracerEndpoint)
-}
-
-func TestGetGoqueParamsBadParseToDefaults(t *testing.T) {
-	environ := os.Environ()
-	defer _setEnvFromEnviron(environ)
-
-	os.Clearenv()
-
-	config := GetDefaultConfiguration()
-
-	for k, v := range config {
-		switch k {
-		case "escapeHtml":
-			os.Setenv(v.envVar, "thisisnotabool")
-		case "tracerDisable":
-			os.Setenv(v.envVar, "thisisalsonotabool")
-		case "tracerRatio":
-			os.Setenv(v.envVar, "zeropointthree")
-		case "logLevel":
-			os.Setenv(v.envVar, "Plaid")
-		default:
-			os.Setenv(v.envVar, v.val)
-		}
-	}
-
-	args := []string{os.Args[0]}
-
-	gp := _resetGetGoqueParamsFromStr(args)
-
-	assert.Equal(t, defaultEscapeHTML, gp.escape)
-	assert.Equal(t, defaultHost, gp.host)
-	assert.Equal(t, defaultPath, gp.path)
-	assert.Equal(t, defaultPort, gp.port)
-	assert.Equal(t, defaultScheme, gp.scheme)
-	assert.Equal(t, defaultTracerDisable, gp.tracerDisabled)
-	assert.Equal(t, defaultTracerRatio, gp.tracerRatio)
-	assert.Equal(t, defaultTracerEndpoint, gp.tracerEndpoint)
-}
 
 func Test_main(t *testing.T) {
 	tests := []struct {
@@ -263,10 +102,12 @@ func Test_main(t *testing.T) {
 		},
 	}
 
+	// Configure the JSON parser
 	json := jsoniter.Config{
 		EscapeHTML: false,
 	}.Froze()
 
+	os.Clearenv()
 	_clearFlags()
 	_setArgs([]string{os.Args[0]})
 
@@ -313,5 +154,180 @@ func Test_main(t *testing.T) {
 
 		assert.Equalf(t, desiredObj, bodyObj, "Body did not match")
 
+	}
+}
+
+func TestConfigDefaults(t *testing.T) {
+	_clearFlags()
+	os.Clearenv()
+
+	log.Info().Msg(reflect.Func.String())
+	defaultConfig := GetDefaultConfiguration()
+	_, config := SetConfiguration(GetDefaultConfiguration())
+
+	for k, _ := range defaultConfig {
+		assert.Equal(t, defaultConfig[k].val, config[k].val)
+	}
+}
+
+func TestParseGoqueParams(t *testing.T) {
+	type args struct {
+		setEnvs map[string]string
+		config  map[string]*ConfigurationVar
+	}
+
+	test2Prep := GetDefaultConfiguration()
+	for k, v := range test2Prep {
+		if k != "jq" {
+			v.val = v.envVar
+		}
+	}
+
+	test3Prep := GetDefaultConfiguration()
+	for k, v := range test3Prep {
+		if k != "jq" {
+			v.val = v.envVar
+		} else {
+			v.val = "."
+		}
+	}
+
+	tests := []struct {
+		name string
+		args args
+		want *GoqueParams
+	}{
+		{
+			name: "test1 - defaults",
+			args: args{
+				setEnvs: map[string]string{},
+				config:  GetDefaultConfiguration(),
+			},
+			want: &GoqueParams{
+				code:           nil,
+				tracerDisabled: defaultTracerDisable,
+				tracerRatio:    defaultTracerRatio,
+				tracerEndpoint: defaultTracerEndpoint,
+				escape:         defaultEscapeHTML,
+				host:           defaultHost,
+				port:           defaultPort,
+				scheme:         defaultScheme,
+				path:           defaultPath,
+			},
+		},
+		{
+			name: "test2 - parse errors (use defaults)",
+			args: args{
+				setEnvs: map[string]string{},
+				config:  test2Prep,
+			},
+			want: &GoqueParams{
+				code:           nil,
+				tracerDisabled: false,
+				tracerRatio:    1.0,
+				tracerEndpoint: "GOQUE_TRACER_ENDPOINT",
+				escape:         false,
+				host:           "GOQUE_HOST",
+				port:           "GOQUE_PORT",
+				scheme:         "GOQUE_SCHEME",
+				path:           "GOQUE_PATH",
+			},
+		},
+		{
+			name: "test3 - compile jq",
+			args: args{
+				setEnvs: map[string]string{},
+				config:  test3Prep,
+			},
+			want: &GoqueParams{
+				code:           CompileJQCode("."),
+				tracerDisabled: false,
+				tracerRatio:    1.0,
+				tracerEndpoint: "GOQUE_TRACER_ENDPOINT",
+				escape:         false,
+				host:           "GOQUE_HOST",
+				port:           "GOQUE_PORT",
+				scheme:         "GOQUE_SCHEME",
+				path:           "GOQUE_PATH",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ParseGoqueParams(tt.args.setEnvs, tt.args.config); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ParseGoqueParams() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSetConfiguration(t *testing.T) {
+	type args struct {
+		config  map[string]*ConfigurationVar
+		envVars map[string]string
+		flags   []string
+	}
+
+	test2Configuration := GetDefaultConfiguration()
+	test2EnvVars := make(map[string]string)
+	for k, v := range test2Configuration {
+		test2EnvVars[v.envVar] = v.val + "2"
+		test2Configuration[k].val += "2"
+	}
+
+	tests := []struct {
+		name  string
+		args  args
+		want  map[string]string
+		want1 map[string]*ConfigurationVar
+	}{
+		{
+			name: "test 1 - defaults",
+			args: args{
+				config:  GetDefaultConfiguration(),
+				envVars: make(map[string]string),
+				flags:   []string{os.Args[0]},
+			},
+			want1: GetDefaultConfiguration(),
+			want:  make(map[string]string),
+		},
+		{
+			name: "test 2 - envs",
+			args: args{
+				config:  GetDefaultConfiguration(),
+				envVars: test2EnvVars,
+				flags:   []string{os.Args[0]},
+			},
+			want1: test2Configuration,
+			want:  test2EnvVars,
+		},
+	}
+	for _, tt := range tests {
+		environ := os.Environ()
+		defer _setEnvFromEnviron(environ)
+
+		_clearFlags()
+		os.Clearenv()
+
+		for k, v := range tt.args.envVars {
+			os.Setenv(k, v)
+		}
+
+		_setArgs(tt.args.flags)
+
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1 := SetConfiguration(tt.args.config)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SetConfiguration() got = %v, want %v", got, tt.want)
+			}
+
+			assert.Len(t, got1, len(tt.args.config))
+
+			for k, _ := range got1 {
+				if !reflect.DeepEqual(got1[k], tt.want1[k]) {
+					t.Errorf("SetConfiguration() got1 = %v, want %v", got1[k], tt.want1[k])
+				}
+			}
+		})
 	}
 }
