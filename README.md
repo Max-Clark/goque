@@ -78,6 +78,12 @@ go build -v -ldflags="-X 'main.Version=v1.0.0' -X 'app/build.User=$(id -u -n)' -
 
 ---
 
+## Version history
+
+### v0.0.1
+
+- Initial release with working and tested code
+
 # Plan
 
 - [x] Initial commit
