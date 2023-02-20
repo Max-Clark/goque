@@ -1,6 +1,9 @@
-name: Generate code coverage badge
+name: Coverage
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
