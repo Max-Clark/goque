@@ -57,6 +57,7 @@ the jq code, resulting in faster processing.
 ./goque -jq '."test"'  # Both work, but cli has preference
 ```
 
+
 ### Goque Configuration
 
 *NOTE* Variable preference is Env Var < Command Line < HTTP Header
