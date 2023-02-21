@@ -81,7 +81,7 @@ go build -v -ldflags="-X 'main.Version=v1.0.0' -X 'app/build.User=$(id -u -n)' -
 
 ## Version history
 
-### v0.1.1
+### v0.1.2
 
 - Integrated github actions and docker repo
 
@@ -124,11 +124,11 @@ go build -v -ldflags="-X 'main.Version=v1.0.0' -X 'app/build.User=$(id -u -n)' -
   - [x] Implement testing scaffolding
 - ~GoquePlay~ Going to make gojqplay instead, probably better to separate and probably more popular
 - CI
-  - [ ] Lock main branch, merge by request
-  - [ ] Run tests
-  - [ ] Run vuln scan
-  - [ ] Build wasm module
-  - [ ] Test wasm module
-  - [ ] Github release
-  - [ ] Build image and push
+  - [x] Lock main branch, merge by request
+  - [x] Run tests
+  - [x] Run vuln scan
+  - [ ] ~Build wasm module~ Moving to gojqplay
+  - [ ] ~Test wasm module~ Moving to gojqplay
+  - [x] Github release
+  - [x] Build image and push
     
