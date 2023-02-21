@@ -81,7 +81,11 @@ go build -v -ldflags="-X 'main.Version=v1.0.0' -X 'app/build.User=$(id -u -n)' -
 
 ## Version history
 
-### v0.0.1
+### v0.1.1
+
+- Integrated github actions and docker repo
+
+### v0.1.0
 
 - Initial release with working and tested code
 
