@@ -1,4 +1,5 @@
 # goque
+![Coverage](https://img.shields.io/badge/Coverage-87.8%25-brightgreen)
 
 A blazing fast and dead simple http-based jq processor written in go.
 
