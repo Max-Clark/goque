@@ -29,6 +29,14 @@ TBD
 
 ### Docker
 
+`docker run --rm -p 8080:8080 -d --name goque ghcr.io/max-clark/goque`
+
+Or, with a predefined JQ filter
+
+`docker run -e GOQUE_JQ_FILTER=.test -p 8080:8080 -d --name goque --rm ghcr.io/max-clark/goque`
+
+### Docker (local)
+
 - `docker build --tag local/goque -f goque.dockerfile .`
 - `docker run -d --name=goque -p 8888:8080 local/goque`
 
@@ -36,11 +44,19 @@ TBD
 
 Goque is highly configurable, but defaults will work for most deployments.
 
-```sh
-./goque  # Start a new goque instance
-```
 
 ```sh
+docker run -e GOQUE_JQ_FILTER=.test.pineapple -p 8080:8080 -d --name goque --rm ghcr.io/max-clark/goque
+
+# GOQUE_JQ_FILTER=.test.pineapple
+curl --request POST \
+  --url http://localhost:8080/api/v1/jq \
+  --header 'Content-Type: application/json' \
+  --data '{"test":{"peanuts": true,"pineapple":"nope."}}'
+"nope."%
+
+# If JQ filter is not assigned, it can be set with the header x-goque-jq-filter
+# If JQ filter is already set, x-goque-jq-filter will override
 curl --request POST \
   --url http://localhost:8080/api/v1/jq \
   --header 'Content-Type: application/json' \
